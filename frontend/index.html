@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangDetect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --border: #e0ddd6;
+      --text: #1a1916;
+      --muted: #8a8780;
+      --accent: #2d5a27;
+      --accent-light: #e8f0e7;
+      --danger: #8b2020;
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
+      font-family: var(--mono);
+      font-weight: 400;
+      font-size: 1.1rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      width: 100%;
+      max-width: 560px;
+      padding: 2rem;
+    }
+
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0.9rem 1rem;
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.6;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .char-count {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 0.4rem;
+    }
+
+    button {
+      margin-top: 1.2rem;
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    button:hover:not(:disabled) { opacity: 0.8; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Result area */
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--bg);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .result.visible { display: block; }
+
+    .result.error {
+      border-color: var(--danger);
+      background: #fdf5f5;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .result-language {
+      font-family: var(--mono);
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .result-error {
+      font-size: 0.9rem;
+      color: var(--danger);
+    }
+
+    .confidence-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-top: 0.8rem;
+    }
+
+    .confidence-bar-wrap {
+      flex: 1;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .confidence-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .confidence-pct {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      margin-top: 2.5rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>LangDetect</h1>
+    <p>Paste any text — the model tells you the language.</p>
+  </header>
+
+  <div class="card">
+    <label for="inputText">Input text</label>
+    <textarea
+      id="inputText"
+      placeholder="Type or paste text here…"
+      maxlength="2000"
+    ></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 2000</div>
+
+    <button id="detectBtn" onclick="detect()" disabled>Detect language</button>
+
+    <div class="result" id="result">
+      <div class="result-label" id="resultLabel">Detected language</div>
+      <div class="result-language" id="resultLanguage"></div>
+      <div class="result-error" id="resultError"></div>
+      <div class="confidence-row" id="confidenceRow">
+        <div class="confidence-bar-wrap">
+          <div class="confidence-bar" id="confidenceBar"></div>
+        </div>
+        <span class="confidence-pct" id="confidencePct"></span>
+      </div>
+    </div>
+  </div>
+
+  <footer>fasttext · supervised classification</footer>
+
+  <script>
+    const textarea = document.getElementById('inputText');
+    const btn      = document.getElementById('detectBtn');
+    const charCount = document.getElementById('charCount');
+
+    textarea.addEventListener('input', () => {
+      const len = textarea.value.length;
+      charCount.textContent = len;
+      btn.disabled = len === 0;
+    });
+
+    // Allow Ctrl+Enter to submit
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') detect();
+    });
+
+    async function detect() {
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      // Loading state
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Detecting…';
+
+      const resultEl  = document.getElementById('result');
+      const langEl    = document.getElementById('resultLanguage');
+      const errEl     = document.getElementById('resultError');
+      const bar       = document.getElementById('confidenceBar');
+      const pct       = document.getElementById('confidencePct');
+      const confRow   = document.getElementById('confidenceRow');
+      const resLabel  = document.getElementById('resultLabel');
+
+      resultEl.className = 'result visible';
+      langEl.textContent = '';
+      errEl.textContent  = '';
+      bar.style.width    = '0%';
+      pct.textContent    = '';
+      confRow.style.display = 'flex';
+
+      try {
+        // Change /api/detect to your backend URL if running locally
+        const resp = await fetch('http://localhost:8000/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data.detail || 'Something went wrong.');
+        }
+
+        resLabel.textContent = 'Detected language';
+        langEl.textContent   = data.language;
+        confRow.style.display = 'flex';
+
+        // Animate bar after a tiny tick
+        setTimeout(() => {
+          bar.style.width = data.confidence + '%';
+          pct.textContent = data.confidence.toFixed(1) + '% confidence';
+        }, 30);
+
+        resultEl.classList.remove('error');
+
+      } catch (err) {
+        resultEl.classList.add('error');
+        resLabel.textContent  = 'Error';
+        langEl.textContent    = '';
+        errEl.textContent     = err.message;
+        confRow.style.display = 'none';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Detect language';
+      }
+    }
+  </script>
+</body>
+</html>
